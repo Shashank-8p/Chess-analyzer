@@ -1,7 +1,7 @@
-// --- FIXED IMPORTS (Using esm.sh for better browser support) ---
-import { Chessboard, FEN } from "https://esm.sh/cm-chessboard@8/src/cm-chessboard/Chessboard.js";
-import { ARROW_TYPE, Arrows } from "https://esm.sh/cm-chessboard@8/src/cm-chessboard/extensions/arrows/Arrows.js";
-import { MARKERS, Markers } from "https://esm.sh/cm-chessboard@8/src/cm-chessboard/extensions/markers/Markers.js";
+// --- FIXED IMPORTS (Using GitHub source via jsDelivr to avoid 404s) ---
+import { Chessboard, FEN } from "https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/src/cm-chessboard/Chessboard.js";
+import { ARROW_TYPE, Arrows } from "https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/src/cm-chessboard/extensions/arrows/Arrows.js";
+import { MARKERS, Markers } from "https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/src/cm-chessboard/extensions/markers/Markers.js";
 
 // --- Game State ---
 const game = new Chess();
@@ -12,8 +12,8 @@ let isEngineReady = false;
 // --- Initialize Board ---
 board = new Chessboard(document.getElementById("board"), {
     position: FEN.start,
-    // FIXED: Points to a reliable source for the piece images (SVG)
-    assetsUrl: "https://cdn.jsdelivr.net/npm/cm-chessboard@8/assets/",
+    // FIXED: Points to the GitHub assets folder
+    assetsUrl: "https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/assets/",
     style: { cssClass: "default" },
     extensions: [
         { class: Markers, props: { autoMarkers: MARKERS.FRAME } },
@@ -34,7 +34,8 @@ board.enableMoveInput((event) => {
             if (move) {
                 event.chessboard.setPosition(game.fen());
                 updateStatus();
-                startAnalysis(); 
+                // Short delay to let the board update before analyzing
+                setTimeout(startAnalysis, 100); 
                 return true;
             } else {
                 return false; 
@@ -44,6 +45,7 @@ board.enableMoveInput((event) => {
 
 // --- Stockfish Engine Integration ---
 function initStockfish() {
+    // We use a standard URL for Stockfish
     const stockfishUrl = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
     
     fetch(stockfishUrl).then(response => response.blob()).then(blob => {
@@ -53,22 +55,28 @@ function initStockfish() {
         stockfish.onmessage = function(event) {
             const line = event.data;
             
+            // 1. Best Move Arrow
             if (line.startsWith("bestmove")) {
-                const bestMove = line.split(" ")[1];
-                document.getElementById("bestMove").innerText = bestMove;
+                const parts = line.split(" ");
+                const bestMove = parts[1];
                 
-                // Draw arrow for best move
-                const from = bestMove.substring(0, 2);
-                const to = bestMove.substring(2, 4);
-                
-                board.removeArrows(); 
-                board.addArrow(ARROW_TYPE.danger, from, to);
+                if (bestMove && bestMove !== '(none)') {
+                    document.getElementById("bestMove").innerText = bestMove;
+                    
+                    const from = bestMove.substring(0, 2);
+                    const to = bestMove.substring(2, 4);
+                    
+                    board.removeArrows(); 
+                    board.addArrow(ARROW_TYPE.danger, from, to);
+                }
             }
 
+            // 2. Evaluation Score
             if (line.includes("score cp") || line.includes("score mate")) {
                 parseEvaluation(line);
             }
             
+            // 3. Depth
             if (line.includes("depth")) {
                 const depth = line.match(/depth\s+(\d+)/);
                 if(depth) document.getElementById("depth").innerText = depth[1];
@@ -101,17 +109,26 @@ function parseEvaluation(line) {
     else {
         const cpMatch = line.match(/score cp (-?\d+)/);
         if (cpMatch) {
+            // Convert centipawns to pawns
             score = parseInt(cpMatch[1]) / 100;
+            // Stockfish evaluates from the side to move; we want White's perspective
             if (game.turn() === 'b') score = -score;
-            document.getElementById("eval-score").innerText = score > 0 ? `+${score}` : score;
+            
+            // Add + sign for positive scores
+            const sign = score > 0 ? "+" : "";
+            document.getElementById("eval-score").innerText = `${sign}${score}`;
         }
     }
     updateEvalBar(score);
 }
 
 function updateEvalBar(score) {
+    // Clamp score between -5 and 5 for the visual bar
     const clampedScore = Math.max(-5, Math.min(5, score));
+    // Calculate percentage (50% is even)
     const percentage = 50 + (clampedScore * 10);
+    // Invert because height grows from top in some layouts, but here we use bottom positioning
+    // For this CSS, 50% is middle. White advantage > 50%.
     document.getElementById("eval-bar").style.height = `${percentage}%`;
 }
 
