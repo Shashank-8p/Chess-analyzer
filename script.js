@@ -1,6 +1,7 @@
-import { Chessboard, FEN, COLOR } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8/src/cm-chessboard/Chessboard.js";
-import { ARROW_TYPE, Arrows } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8/src/cm-chessboard/extensions/arrows/Arrows.js";
-import { MARKERS, Markers } from "https://cdn.jsdelivr.net/npm/cm-chessboard@8/src/cm-chessboard/extensions/markers/Markers.js";
+// --- UPDATED IMPORTS (Use unpkg.com) ---
+import { Chessboard, FEN, COLOR } from "https://unpkg.com/cm-chessboard@8.5.0/src/cm-chessboard/Chessboard.js";
+import { ARROW_TYPE, Arrows } from "https://unpkg.com/cm-chessboard@8.5.0/src/cm-chessboard/extensions/arrows/Arrows.js";
+import { MARKERS, Markers } from "https://unpkg.com/cm-chessboard@8.5.0/src/cm-chessboard/extensions/markers/Markers.js";
 
 // --- Game State ---
 const game = new Chess();
@@ -11,7 +12,8 @@ let isEngineReady = false;
 // --- Initialize Board ---
 board = new Chessboard(document.getElementById("board"), {
     position: FEN.start,
-    assetsUrl: "https://cdn.jsdelivr.net/npm/cm-chessboard@8/assets/",
+    // CRITICAL: Update this asset URL too!
+    assetsUrl: "https://unpkg.com/cm-chessboard@8.5.0/assets/",
     style: { cssClass: "default" },
     extensions: [
         { class: Markers, props: { autoMarkers: MARKERS.FRAME } },
