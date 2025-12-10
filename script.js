@@ -1,175 +1,165 @@
-// --- FIXED IMPORTS (Using GitHub source via jsDelivr to avoid 404s) ---
-import { Chessboard, FEN } from "https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/src/cm-chessboard/Chessboard.js";
-import { ARROW_TYPE, Arrows } from "https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/src/cm-chessboard/extensions/arrows/Arrows.js";
-import { MARKERS, Markers } from "https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/src/cm-chessboard/extensions/markers/Markers.js";
+// --- Global Variables ---
+var board = null;
+var game = new Chess();
+var $status = $('#status');
+var $bestMove = $('#bestMove');
+var $depth = $('#depth');
+var stockfish = null;
+var isEngineReady = false;
 
-// --- Game State ---
-const game = new Chess();
-let board = null;
-let stockfish = null;
-let isEngineReady = false;
-
-// --- Initialize Board ---
-board = new Chessboard(document.getElementById("board"), {
-    position: FEN.start,
-    // FIXED: Points to the GitHub assets folder
-    assetsUrl: "https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/assets/",
-    style: { cssClass: "default" },
-    extensions: [
-        { class: Markers, props: { autoMarkers: MARKERS.FRAME } },
-        { class: Arrows, props: {} }
-    ]
-});
-
-// Enable Move Input
-board.enableMoveInput((event) => {
-    switch (event.type) {
-        case "moveInputFinished":
-            const move = game.move({
-                from: event.squareFrom,
-                to: event.squareTo,
-                promotion: 'q'
-            });
-
-            if (move) {
-                event.chessboard.setPosition(game.fen());
-                updateStatus();
-                // Short delay to let the board update before analyzing
-                setTimeout(startAnalysis, 100); 
-                return true;
-            } else {
-                return false; 
-            }
-    }
-});
-
-// --- Stockfish Engine Integration ---
+// --- Stockfish Integration (The Blob Method) ---
 function initStockfish() {
-    // We use a standard URL for Stockfish
-    const stockfishUrl = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
+    // We load Stockfish as a Blob to avoid CORS on the worker itself
+    var stockfishUrl = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
     
     fetch(stockfishUrl).then(response => response.blob()).then(blob => {
-        const objectURL = URL.createObjectURL(blob);
+        var objectURL = URL.createObjectURL(blob);
         stockfish = new Worker(objectURL);
 
         stockfish.onmessage = function(event) {
-            const line = event.data;
-            
-            // 1. Best Move Arrow
+            var line = event.data;
+
+            // 1. Detect Best Move
             if (line.startsWith("bestmove")) {
-                const parts = line.split(" ");
-                const bestMove = parts[1];
-                
-                if (bestMove && bestMove !== '(none)') {
-                    document.getElementById("bestMove").innerText = bestMove;
-                    
-                    const from = bestMove.substring(0, 2);
-                    const to = bestMove.substring(2, 4);
-                    
-                    board.removeArrows(); 
-                    board.addArrow(ARROW_TYPE.danger, from, to);
+                var bestMove = line.split(" ")[1];
+                if(bestMove && bestMove !== '(none)') {
+                    $bestMove.text(bestMove);
+                    highlightBestMove(bestMove);
                 }
             }
 
-            // 2. Evaluation Score
+            // 2. Detect Eval
             if (line.includes("score cp") || line.includes("score mate")) {
                 parseEvaluation(line);
             }
             
             // 3. Depth
             if (line.includes("depth")) {
-                const depth = line.match(/depth\s+(\d+)/);
-                if(depth) document.getElementById("depth").innerText = depth[1];
+                var depth = line.match(/depth\s+(\d+)/);
+                if(depth) $depth.text(depth[1]);
             }
         };
 
         stockfish.postMessage("uci");
         isEngineReady = true;
-        document.getElementById("status").innerText = "Engine Ready. White to move.";
+        $status.text("Engine Ready! White to Move.");
     });
 }
 
+// --- Analysis Functions ---
 function startAnalysis() {
     if (!stockfish || !isEngineReady) return;
     stockfish.postMessage("stop");
     stockfish.postMessage("position fen " + game.fen());
-    stockfish.postMessage("go depth 15");
+    stockfish.postMessage("go depth 15"); // Depth 15 is fast and decent
 }
 
 function parseEvaluation(line) {
-    let score = 0.0;
-    
+    var score = 0.0;
     if (line.includes("mate")) {
-        const mateMatch = line.match(/score mate (-?\d+)/);
-        if (mateMatch) {
-            score = mateMatch[1] > 0 ? 100 : -100;
-            document.getElementById("eval-score").innerText = `M${Math.abs(mateMatch[1])}`;
-        }
-    } 
-    else {
-        const cpMatch = line.match(/score cp (-?\d+)/);
-        if (cpMatch) {
-            // Convert centipawns to pawns
-            score = parseInt(cpMatch[1]) / 100;
-            // Stockfish evaluates from the side to move; we want White's perspective
-            if (game.turn() === 'b') score = -score;
-            
-            // Add + sign for positive scores
-            const sign = score > 0 ? "+" : "";
-            document.getElementById("eval-score").innerText = `${sign}${score}`;
-        }
-    }
-    updateEvalBar(score);
-}
-
-function updateEvalBar(score) {
-    // Clamp score between -5 and 5 for the visual bar
-    const clampedScore = Math.max(-5, Math.min(5, score));
-    // Calculate percentage (50% is even)
-    const percentage = 50 + (clampedScore * 10);
-    // Invert because height grows from top in some layouts, but here we use bottom positioning
-    // For this CSS, 50% is middle. White advantage > 50%.
-    document.getElementById("eval-bar").style.height = `${percentage}%`;
-}
-
-// --- UI Controls ---
-document.getElementById("flipBtn").onclick = () => board.setOrientation(board.getOrientation() === 'w' ? 'b' : 'w');
-
-document.getElementById("resetBtn").onclick = () => {
-    game.reset();
-    board.setPosition(FEN.start);
-    board.removeArrows();
-    document.getElementById("eval-bar").style.height = "50%";
-    document.getElementById("eval-score").innerText = "0.0";
-    startAnalysis();
-};
-
-document.getElementById("loadPgnBtn").onclick = () => {
-    const pgn = document.getElementById("pgnInput").value;
-    const loaded = game.load_pgn(pgn);
-    if (loaded) {
-        board.setPosition(game.fen());
-        updateStatus();
-        startAnalysis();
-        document.getElementById("moveHistory").innerText = game.pgn();
+        var mateMatch = line.match(/score mate (-?\d+)/);
+        score = mateMatch[1] > 0 ? 100 : -100;
+        $('#eval-score').text('M' + Math.abs(mateMatch[1]));
     } else {
-        alert("Invalid PGN!");
+        var cpMatch = line.match(/score cp (-?\d+)/);
+        if (cpMatch) {
+            score = parseInt(cpMatch[1]) / 100;
+            if (game.turn() === 'b') score = -score;
+            var sign = score > 0 ? "+" : "";
+            $('#eval-score').text(sign + score);
+        }
     }
-};
+    
+    // Update Bar Height
+    var clamped = Math.max(-5, Math.min(5, score));
+    var percent = 50 + (clamped * 10);
+    $('#eval-bar').css('height', percent + '%');
+}
+
+// --- Visual Board Logic (Chessboard.js) ---
+function onDragStart (source, piece) {
+    if (game.game_over()) return false;
+    if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+        (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+        return false;
+    }
+}
+
+function onDrop (source, target) {
+    // see if the move is legal
+    var move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q' 
+    });
+
+    // illegal move
+    if (move === null) return 'snapback';
+
+    updateStatus();
+    // Clear old highlights and start analysis
+    $('.square-55d63').removeClass('highlight-best');
+    setTimeout(startAnalysis, 200);
+}
+
+function onSnapEnd () {
+    board.position(game.fen());
+}
 
 function updateStatus() {
-    let status = '';
-    let moveColor = game.turn() === 'b' ? 'Black' : 'White';
+    var status = '';
+    var moveColor = 'White';
+    if (game.turn() === 'b') moveColor = 'Black';
 
-    if (game.in_checkmate()) {
-        status = 'Game over, ' + moveColor + ' is in checkmate.';
-    } else if (game.in_draw()) {
-        status = 'Game over, drawn position';
-    } else {
+    if (game.in_checkmate()) status = 'Game over, ' + moveColor + ' is in checkmate.';
+    else if (game.in_draw()) status = 'Game over, drawn position';
+    else {
         status = moveColor + ' to move';
         if (game.in_check()) status += ', ' + moveColor + ' is in check';
     }
-    document.getElementById("status").innerText = status;
+    $status.text(status);
 }
 
+// Highlight the Best Move squares in RED
+function highlightBestMove(bestMove) {
+    // Remove old highlights
+    $('.square-55d63').removeClass('highlight-best');
+
+    // Parse 'e2e4' into 'e2' and 'e4'
+    var source = bestMove.substring(0, 2);
+    var target = bestMove.substring(2, 4);
+
+    // Add highlight class using chessboard.js selectors
+    $('.square-' + source).addClass('highlight-best');
+    $('.square-' + target).addClass('highlight-best');
+}
+
+// --- Initialization ---
+var config = {
+    draggable: true,
+    position: 'start',
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onSnapEnd: onSnapEnd
+};
+board = Chessboard('myBoard', config);
 initStockfish();
+
+// --- Button Listeners ---
+$('#flipBtn').on('click', board.flip);
+$('#startBtn').on('click', function() {
+    game.reset();
+    board.start();
+    $('.square-55d63').removeClass('highlight-best');
+    startAnalysis();
+});
+$('#loadPgnBtn').on('click', function() {
+    var pgn = $('#pgnInput').val();
+    if(game.load_pgn(pgn)) {
+        board.position(game.fen());
+        updateStatus();
+        startAnalysis();
+    } else {
+        alert("Invalid PGN");
+    }
+});

@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Analysis Engine</title>
+    <title>Chess Analysis (Stable)</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/shaack/cm-chessboard@8.5.0/assets/chessboard.css">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,27 +21,23 @@
         </div>
 
         <div class="board-container">
-            <div id="board"></div>
+            <div id="myBoard"></div>
             <div id="status">Loading Engine...</div>
         </div>
 
         <div class="sidebar">
             <h2>Analysis Tools</h2>
-            
             <div class="control-group">
-                <button id="flipBtn"><i class="fas fa-retweet"></i> Flip Board</button>
-                <button id="resetBtn"><i class="fas fa-undo"></i> Reset</button>
+                <button id="flipBtn"><i class="fas fa-retweet"></i> Flip</button>
+                <button id="startBtn"><i class="fas fa-undo"></i> Reset</button>
             </div>
 
             <div class="pgn-group">
                 <h3>Load PGN</h3>
-                <textarea id="pgnInput" placeholder="Paste PGN here (e.g. 1. e4 e5...)"></textarea>
-                <button id="loadPgnBtn">Analyze Game</button>
+                <textarea id="pgnInput" placeholder="Paste PGN here..."></textarea>
+                <button id="loadPgnBtn">Analyze</button>
             </div>
 
-            <div class="move-history" id="moveHistory">
-                </div>
-            
             <div class="engine-info">
                 <strong>Best Move:</strong> <span id="bestMove">-</span><br>
                 <strong>Depth:</strong> <span id="depth">-</span>
@@ -46,8 +45,11 @@
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <script type="module" src="script.js"></script>
+    
+    <script src="script.js"></script>
 
 </body>
 </html>
