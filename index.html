@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Analysis Engine</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cm-chessboard@8/assets/chessboard.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="main-layout">
+        <div class="eval-container">
+            <div id="eval-bar">
+                <div id="eval-score">0.0</div>
+            </div>
+        </div>
+
+        <div class="board-container">
+            <div id="board"></div>
+            <div id="status">Loading Engine...</div>
+        </div>
+
+        <div class="sidebar">
+            <h2>Analysis Tools</h2>
+            
+            <div class="control-group">
+                <button id="flipBtn"><i class="fas fa-retweet"></i> Flip Board</button>
+                <button id="resetBtn"><i class="fas fa-undo"></i> Reset</button>
+            </div>
+
+            <div class="pgn-group">
+                <h3>Load PGN</h3>
+                <textarea id="pgnInput" placeholder="Paste PGN here (e.g. 1. e4 e5...)"></textarea>
+                <button id="loadPgnBtn">Analyze Game</button>
+            </div>
+
+            <div class="move-history" id="moveHistory">
+                </div>
+            
+            <div class="engine-info">
+                <strong>Best Move:</strong> <span id="bestMove">-</span><br>
+                <strong>Depth:</strong> <span id="depth">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script type="module" src="script.js"></script>
+
+</body>
+</html>
