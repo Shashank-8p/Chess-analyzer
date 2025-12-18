@@ -155,6 +155,7 @@ Contributions are welcome! Feel free to:
 
 For issues, questions, or suggestions, please open an issue on the GitHub repository.
 
+Created by AI!!!
 ---
 
 **Enjoy analyzing chess!** ♟️
